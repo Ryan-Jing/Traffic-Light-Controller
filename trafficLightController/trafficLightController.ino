@@ -1,5 +1,6 @@
 #define RED_LED_PIN 9
 #define GREEN_LED_PIN 10
+#define YELLOW_LED_PIN 11
 #define BUTTON_PIN 3
 
 #define COMPARE_MATCH_REG(f) (16000000) / (f*1024) - 1
@@ -7,6 +8,9 @@
 
 volatile byte redLedState = LOW;
 volatile byte greenLedState = LOW;
+volatile byte yellowLedState = LOW;
+
+uint32_t timeSeconds = 0;
 
 typedef enum {
   RED,
@@ -32,6 +36,7 @@ void setup() {
   //set pins as outputs
   pinMode(RED_LED_PIN, OUTPUT);
   pinMode(GREEN_LED_PIN, OUTPUT);
+  pinMode(YELLOW_LED_PIN, OUTPUT);
   pinMode(BUTTON_PIN, INPUT);
 
   setTimer1Freq(DEFAULT_FREQUENCY_HZ);
@@ -41,7 +46,7 @@ void setup() {
 }
 
 void loop() {
-
+  trafficLightController();
 }
 
 void setTimer1Freq(float freqHz){
@@ -69,33 +74,48 @@ void blinkLed() {
   digitalWrite(RED_LED_PIN, redLedState);
 }
 
+void trafficLightController(){
+  switch (myTrafficLight.curState) {
+    case RED:
+      while(getTimeSeconds() < 5)
+      {
+        digitalWrite(RED_LED_PIN, HIGH);
+      }
+      digitalWrite(RED_LED_PIN, LOW);
+      myTrafficLight.curState = YELLOW;
+      break;
+    case YELLOW:
+      while(getTimeSeconds() < 7)
+      {
+        digitalWrite(YELLOW_LED_PIN, HIGH);
+      }
+      digitalWrite(YELLOW_LED_PIN, LOW);
+      myTrafficLight.curState = GREEN;
+      break;
+    case GREEN:
+      while(getTimeSeconds() < 10)
+      {
+        digitalWrite(GREEN_LED_PIN, HIGH);
+      }
+      digitalWrite(GREEN_LED_PIN, LOW);
+      resetTimeSeconds();
+      myTrafficLight.curState = RED;
+      break;
+  }
+}
+
+void resetTimeSeconds()
+{
+  timeSeconds = 0;
+}
+
+int getTimeSeconds()
+{
+  return timeSeconds;
+}
+
+
 ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz toggles pin 13 (LED)
 //generates pulse wave of frequency 1Hz/2 = 0.5kHz (takes two cycles for full wave- toggle high then toggle low)
-  if(myTrafficLight.curState == RED ) {
-    if (redLedState){
-      digitalWrite(GREEN_LED_PIN,HIGH);
-
-      redLedState = 0;
-    }
-    else{
-      digitalWrite(GREEN_LED_PIN,LOW);
-      redLedState = 1;
-    }
-
-    myTrafficLight.curState = GREEN;
-    setTimer1Freq(10);
-  }
-  else if( myTrafficLight.curState == GREEN ) {
-    if (greenLedState){
-      digitalWrite(GREEN_LED_PIN,HIGH);
-      greenLedState = 0;
-    }
-    else{
-      digitalWrite(GREEN_LED_PIN,LOW);
-      greenLedState = 1;
-    }
-
-    myTrafficLight.curState = RED;
-    setTimer1Freq(1);
-  }
+  timeSeconds++;
 }
