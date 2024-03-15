@@ -1,0 +1,7 @@
+{
+    "board": "arduino:avr:uno",
+    "port": "/dev/tty.usbserial-1130",
+    "programmer": "avrisp",
+    "sketch": "motorCalibration.ino",
+    "output": "/Users/ryanjing/Arduino/ArduinoOutput/init_config"
+}
