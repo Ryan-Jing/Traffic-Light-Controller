@@ -77,31 +77,28 @@ void blinkLed() {
 void trafficLightController(){
   switch (myTrafficLight.curState) {
     case RED:
-      while(getTimeSeconds() < 5)
-      {
-        digitalWrite(RED_LED_PIN, HIGH);
-      }
-      digitalWrite(RED_LED_PIN, LOW);
+      setTrafficeLight(RED_LED_PIN, 5);
       myTrafficLight.curState = YELLOW;
       break;
     case YELLOW:
-      while(getTimeSeconds() < 7)
-      {
-        digitalWrite(YELLOW_LED_PIN, HIGH);
-      }
-      digitalWrite(YELLOW_LED_PIN, LOW);
+      setTrafficeLight(YELLOW_LED_PIN, 2);
       myTrafficLight.curState = GREEN;
       break;
     case GREEN:
-      while(getTimeSeconds() < 10)
-      {
-        digitalWrite(GREEN_LED_PIN, HIGH);
-      }
-      digitalWrite(GREEN_LED_PIN, LOW);
+      setTrafficeLight(GREEN_LED_PIN, 5);
       resetTimeSeconds();
       myTrafficLight.curState = RED;
       break;
   }
+}
+
+void setTrafficeLight(uint32_t colourLight, uint32_t timerSeconds)
+{
+  while(getTimeSeconds() < timerSeconds)
+  {
+    digitalWrite(colourLight, HIGH);
+  }
+  digitalWrite(colourLight, LOW);
 }
 
 void resetTimeSeconds()
