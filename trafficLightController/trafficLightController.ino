@@ -1,7 +1,8 @@
 #define RED_LED_PIN 9
 #define GREEN_LED_PIN 10
 #define YELLOW_LED_PIN 11
-#define BUTTON_PIN 3
+#define BUTTON_ONE_PIN 2
+#define BUTTON_TWO_PIN 3
 
 #define COMPARE_MATCH_REG(f) (16000000) / (f*1024) - 1
 #define DEFAULT_FREQUENCY_HZ 1
@@ -11,6 +12,10 @@ volatile byte greenLedState = LOW;
 volatile byte yellowLedState = LOW;
 
 uint32_t timeSeconds = 0;
+uint8_t buttonOnePressed = 0;
+uint8_t buttonTwoPressed = 0;
+
+uint32_t redLightTimer = 5;
 
 typedef enum {
   RED,
@@ -37,12 +42,15 @@ void setup() {
   pinMode(RED_LED_PIN, OUTPUT);
   pinMode(GREEN_LED_PIN, OUTPUT);
   pinMode(YELLOW_LED_PIN, OUTPUT);
-  pinMode(BUTTON_PIN, INPUT);
+  pinMode(BUTTON_ONE_PIN, INPUT);
+  pinMode(BUTTON_TWO_PIN, INPUT);
+
 
   setTimer1Freq(DEFAULT_FREQUENCY_HZ);
 
   myTrafficLight.curState = RED;
-  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), blinkLed, RISING);
+  attachInterrupt(digitalPinToInterrupt(BUTTON_ONE_PIN), buttonOneInterrupt, RISING);
+  attachInterrupt(digitalPinToInterrupt(BUTTON_TWO_PIN), buttonTwoInterrupt, RISING);
 }
 
 void loop() {
@@ -51,7 +59,6 @@ void loop() {
 
 void setTimer1Freq(float freqHz){
   cli();//stop interrupts
-
   //set timer1 interrupt at 1Hz
   TCCR1A = 0;// set entire TCCR1A register to 0
   TCCR1B = 0;// same for TCCR1B
@@ -69,29 +76,65 @@ void setTimer1Freq(float freqHz){
   sei();
 }
 
-void blinkLed() {
-  redLedState = !redLedState;
-  digitalWrite(RED_LED_PIN, redLedState);
+void buttonOneInterrupt() {
+  // redLedState = !redLedState;
+  // digitalWrite(RED_LED_PIN, redLedState);
+  buttonOnePressed = 1;
+}
+
+void buttonTwoInterrupt() {
+  buttonTwoPressed = 1;
 }
 
 void trafficLightController(){
+  if( buttonOnePressed == 1 )
+  {
+    redLightTimer = 10;
+    buttonOnePressed = 0;
+  }
+
   switch (myTrafficLight.curState) {
-    case RED:
-      setTrafficeLight(RED_LED_PIN, 5);
+
+    case GREEN:
+      setTrafficeLight(RED_LED_PIN, redLightTimer);
       myTrafficLight.curState = YELLOW;
+      redLightTimer = 5;
       break;
+
     case YELLOW:
       setTrafficeLight(YELLOW_LED_PIN, 2);
       myTrafficLight.curState = GREEN;
       break;
-    case GREEN:
+
+    case RED:
       setTrafficeLight(GREEN_LED_PIN, 5);
+      myTrafficLight.curState = GREEN;
+      if( buttonTwoPressed == 1 )
+      {
+        advancedGreenLight();
+        break;
+      }
       resetTimeSeconds();
-      myTrafficLight.curState = RED;
+      break;
+
+    case ADVANCED_GREEN:
+      resetTimeSeconds();
+      myTrafficLight.curState = GREEN;
       break;
   }
 }
 
+void advancedGreenLight()
+{
+  myTrafficLight.curState = ADVANCED_GREEN;
+  for(int i = 0; i < 5; i++)
+  {
+    digitalWrite(GREEN_LED_PIN, HIGH);
+    delaySeconds(1);
+    digitalWrite(GREEN_LED_PIN, LOW);
+    delaySeconds(1);
+  }
+}
 void setTrafficeLight(uint32_t colourLight, uint32_t timerSeconds)
 {
   while(getTimeSeconds() < timerSeconds)
@@ -111,8 +154,16 @@ int getTimeSeconds()
   return timeSeconds;
 }
 
+void delaySeconds( uint32_t delaySeconds )
+{
+  uint32_t startDelayTime = getTimeSeconds();
+  while(getTimeSeconds() - startDelayTime < delaySeconds)
+  {
+    // do nothing
+  }
+}
 
 ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz toggles pin 13 (LED)
-//generates pulse wave of frequency 1Hz/2 = 0.5kHz (takes two cycles for full wave- toggle high then toggle low)
+  //generates pulse wave of frequency 1Hz/2 = 0.5kHz (takes two cycles for full wave- toggle high then toggle low)
   timeSeconds++;
 }
