@@ -87,7 +87,7 @@ void buttonTwoInterrupt() {
 }
 
 void trafficLightController(){
-  if( buttonOnePressed == 1 )
+  if(buttonOnePressed)
   {
     redLightTimer = 10;
     buttonOnePressed = 0;
@@ -96,20 +96,20 @@ void trafficLightController(){
   switch (myTrafficLight.curState) {
 
     case GREEN:
-      setTrafficeLight(RED_LED_PIN, redLightTimer);
+      setTrafficeLight(YELLOW_LED_PIN, redLightTimer);
       myTrafficLight.curState = YELLOW;
       redLightTimer = 5;
       break;
 
     case YELLOW:
-      setTrafficeLight(YELLOW_LED_PIN, 2);
+      setTrafficeLight(GREEN_LED_PIN, 2);
       myTrafficLight.curState = GREEN;
       break;
 
     case RED:
       setTrafficeLight(GREEN_LED_PIN, 5);
       myTrafficLight.curState = GREEN;
-      if( buttonTwoPressed == 1 )
+      if(buttonTwoPressed)
       {
         advancedGreenLight();
         break;
