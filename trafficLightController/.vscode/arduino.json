@@ -1,7 +1,6 @@
 {
     "board": "arduino:avr:uno",
     "port": "/dev/tty.usbserial-130",
-    "programmer": "avrisp",
     "sketch": "trafficLightController.ino",
-    "output": "/Users/ryanjing/Arduino/ArduinoOutput/init_config"
+    "programmer": "avrisp"
 }

@@ -11,11 +11,13 @@ volatile byte redLedState = LOW;
 volatile byte greenLedState = LOW;
 volatile byte yellowLedState = LOW;
 
-uint32_t timeSeconds = 0;
-uint8_t buttonOnePressed = 0;
-uint8_t buttonTwoPressed = 0;
+volatile uint32_t timeSeconds = 0;
+volatile uint8_t buttonOnePressed = 0;
+volatile uint8_t buttonTwoPressed = 0;
 
 uint32_t redLightTimer = 5;
+
+// state1TransiitonTime = 2;
 
 typedef enum {
   RED,
@@ -84,6 +86,20 @@ void buttonOneInterrupt() {
 
 void buttonTwoInterrupt() {
   buttonTwoPressed = 1;
+  // swtich(myTrafficLight.curState)
+  // {
+  //   case state1 (Red, green):
+  //     lets change the timer to be shorter for the next state!
+  //     break;
+  //   case GREEN:
+  //     same thing here
+  //     break;
+  //   case YELLOW:
+
+  //     break;
+  //   case ADVANCED_GREEN:
+  //     break;
+  // }
 }
 
 void trafficLightController(){
@@ -96,14 +112,14 @@ void trafficLightController(){
   switch (myTrafficLight.curState) {
 
     case GREEN:
-      setTrafficeLight(YELLOW_LED_PIN, redLightTimer);
+      setTrafficeLight(YELLOW_LED_PIN, 2);
       myTrafficLight.curState = YELLOW;
-      redLightTimer = 5;
       break;
 
     case YELLOW:
-      setTrafficeLight(GREEN_LED_PIN, 2);
-      myTrafficLight.curState = GREEN;
+      setTrafficeLight(RED_LED_PIN, redLightTimer);
+      myTrafficLight.curState = RED;
+      redLightTimer = 5;
       break;
 
     case RED:
@@ -165,5 +181,14 @@ void delaySeconds( uint32_t delaySeconds )
 
 ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz toggles pin 13 (LED)
   //generates pulse wave of frequency 1Hz/2 = 0.5kHz (takes two cycles for full wave- toggle high then toggle low)
+
+  // if(timerSeconds == state1TransitionTime) {
+  //   change to first state (red vertical, green horizontal)
+  //   digitalWrite(RED_LED_PIN, HIGH);
+  //   digitalWrite(GREEN_LED_PIN, HIGH);
+  // }
+  // else if(timerSeconds == state1TransitionTime) {
+
+  // }
   timeSeconds++;
 }
