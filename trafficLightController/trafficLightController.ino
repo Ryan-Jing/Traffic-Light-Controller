@@ -30,7 +30,7 @@ uint8_t stateFourTime = STATE_FOUR_TIME_DEFAULT;
 uint8_t maxClockTime = MAX_CLOCK_TIME_DEFAULT;
 
 bool pedestrianButtonHorizontalPressed = false;
-bool pedestrianButtonVeticalPressed = false;
+bool pedestrianButtonVerticalPressed = false;
 
 
 typedef enum {
@@ -121,6 +121,8 @@ void pedestrianButtonHorizontal() {
 
 void pedestrianButtonVertical() {
   /* DO SOME STUFF HERE TO CHANGE THE TIMERS */
+  pedestrianButtonVerticalPressed = true;
+  Serial.println("++++");
 }
 
 void setIntersectionState(traffic_light_intersection_states_t intersectionState) {
@@ -150,9 +152,20 @@ void setIntersectionState(traffic_light_intersection_states_t intersectionState)
     break;
 
     case STATE3:
-      digitalWrite(RED_LED_PIN_HORIZONTAL, HIGH);
-      digitalWrite(GREEN_LED_PIN_VERTICAL, HIGH);
-
+      if(pedestrianButtonVerticalPressed == true) {
+        digitalWrite(RED_LED_PIN_HORIZONTAL, HIGH);
+        digitalWrite(GREEN_LED_PIN_VERTICAL, HIGH);
+        delay(6000);
+        //delaySeconds(6);
+        maxClockTime = maxClockTime + 6;
+        pedestrianButtonVerticalPressed = false;
+        Serial.println("Horizental pedestrian button activated");
+      }
+      else
+      {
+        digitalWrite(RED_LED_PIN_HORIZONTAL, HIGH);
+        digitalWrite(GREEN_LED_PIN_VERTICAL, HIGH);
+      }
     break;
 
     case STATE4:
