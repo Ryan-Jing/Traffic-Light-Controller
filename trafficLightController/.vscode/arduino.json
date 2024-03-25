@@ -2,5 +2,6 @@
     "board": "arduino:avr:uno",
     "port": "/dev/tty.usbserial-120",
     "sketch": "trafficLightController.ino",
-    "programmer": "avrisp"
+    "programmer": "avrisp",
+    "output": "/Users/ryanjing/Arduino/ArduinoOutput"
 }

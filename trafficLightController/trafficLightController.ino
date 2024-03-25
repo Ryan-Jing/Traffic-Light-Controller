@@ -13,7 +13,8 @@
 
 /* Timer macros */
 #define COMPARE_MATCH_REG(f) (16000000) / (f*1024) - 1
-#define DEFAULT_FREQUENCY_HZ 1
+#define TIMER_ONE_DEFAULT_FREQUENCY_HZ 1
+#define TIMER_TWO_DEFAULT_FREQUENCY_HZ 1
 
 #define STATE_ONE_TIME_DEFAULT 11
 #define STATE_TWO_TIME_DEFAULT 7
@@ -75,7 +76,9 @@ void setup() {
   pinMode(BUTTON_PIN_HORIZONTAL, INPUT);
   pinMode(BUTTON_PIN_VERTICAL, INPUT);
 
-  setTimer1Freq(DEFAULT_FREQUENCY_HZ);
+  setTimer1Freq(TIMER_ONE_DEFAULT_FREQUENCY_HZ);
+
+  setTimer2Freq(TIMER_TWO_DEFAULT_FREQUENCY_HZ);
 
   Serial.begin(9600);
 
@@ -83,6 +86,9 @@ void setup() {
 
   setIntersectionState(STATE1);
 
+  // We need two have multiple inputs per interrupt, so we we set a unique pin HIGH for each event
+  // For example, hardware interrupt 1 is for both pedestrian direction. We also set pins 4 and 5 HIGH for parallel and perpendicular. In the interrupt, we check which pin is
+  // HIGH to perform some action.
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_HORIZONTAL), pedestrianButtonHorizontal, RISING);
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_VERTICAL), pedestrianButtonVertical, RISING);
 }
@@ -103,6 +109,27 @@ void setTimer1Freq(float freqHz){
   TCCR1B |= (1 << CS12) | (1 << CS10);
   // enable timer compare interrupt
   TIMSK1 |= (1 << OCIE1A);
+
+  sei();
+}
+
+void setTimer2Freq(float freqHz)
+{
+  cli();//stop interrupts
+
+  //set timer1 interrupt at 1Hz
+  TCCR2A = 0;// set entire TCCR1A register to 0
+  TCCR2B = 0;// same for TCCR1B
+  TCNT2  = 0;//initialize counter value to 0
+  // set compare match register for 1hz increments
+  uint32_t compareMatchRegister = COMPARE_MATCH_REG(freqHz);
+  OCR2A = compareMatchRegister;// = (16*10^6) / (1*1024) - 1 (must be <65536)
+  // turn on CTC mode
+  TCCR2A |= (1 << WGM12);
+  // Set CS12 and CS10 bits for 1024 prescaler
+  TCCR2B |= (1 << CS12) | (1 << CS10);
+  // enable timer compare interrupt
+  TIMSK2 |= (1 << OCIE1A);
 
   sei();
 }
@@ -231,7 +258,16 @@ void delaySeconds(uint32_t delayValueSeconds) {
     }
   }
 }
+
 ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz toggles pin 13 (LED)
 //generates pulse wave of frequency 1Hz/2 = 0.5kHz (takes two cycles for full wave- toggle high then toggle low)
   timerSeconds++;
+}
+
+//We need two timers to show understanding
+ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz toggles pin 13 (LED)
+//generates pulse wave of frequency 1Hz/2 = 0.5kHz (takes two cycles for full wave- toggle high then toggle low)
+if(timerSeconds == maxClockTime) {
+  timerSeconds = 0;
+}
 }
