@@ -1,28 +1,32 @@
 /* Pin definitions */
-#define RED_LED_PIN_HORIZONTAL 8
-#define GREEN_LED_PIN_HORIZONTAL 9
-#define YELLOW_LED_PIN_HORIZONTAL 10
-#define RED_LED_PIN_VERTICAL 11
-#define GREEN_LED_PIN_VERTICAL 12
-#define YELLOW_LED_PIN_VERTICAL 13
+#define RED_LED_PIN_HORIZONTAL      8
+#define GREEN_LED_PIN_HORIZONTAL    9
+#define YELLOW_LED_PIN_HORIZONTAL   10
+#define RED_LED_PIN_VERTICAL        11
+#define GREEN_LED_PIN_VERTICAL      12
+#define YELLOW_LED_PIN_VERTICAL     13
 
-#define BUTTON_PIN_HORIZONTAL 2
-#define BUTTON_PIN_VERTICAL 3
-#define ADVDANCED_GREEN_HORIZONTAL 4
-#define ADVDANCED_GREEN_VERTICALs 5
+#define BUTTON_PIN_PEDESTRIAN       2
+#define BUTTON_PIN_ADVANCED_GREEN   3
+#define PEDESTRIAN_HORIZENTAL       4
+#define PEDESTRIAN_VERTICAL         5
+#define ADVDANCED_GREEN_HORIZENTAL  6
+#define ADVDANCED_GREEN_VERTICAL    7
 
 /* Timer macros */
 #define COMPARE_MATCH_REG(f) (16000000) / (f*1024) - 1
-#define TIMER_ONE_DEFAULT_FREQUENCY_HZ 1
-#define TIMER_TWO_DEFAULT_FREQUENCY_HZ 1
 
-#define STATE_ONE_TIME_DEFAULT 11
-#define STATE_TWO_TIME_DEFAULT 7
-#define STATE_THREE_TIME_DEFAULT 5
-#define STATE_FOUR_TIME_DEFAULT 1
-#define MAX_CLOCK_TIME_DEFAULT 12
+#define TIMER_ONE_DEFAULT_FREQUENCY_HZ 1
+#define TIMER_TWO_DEFAULT_FREQUENCY_HZ 1000
+
+#define STATE_ONE_TIME_DEFAULT    11
+#define STATE_TWO_TIME_DEFAULT    7
+#define STATE_THREE_TIME_DEFAULT  5
+#define STATE_FOUR_TIME_DEFAULT   1
+#define MAX_CLOCK_TIME_DEFAULT    12
 
 uint32_t timerSeconds = 0; // Counter to keep track of the number of seconds that have elapsed
+uint64_t timerMillis = 0; // Counter to keep track of the number of milliseconds that have elapsed
 
 uint8_t stateOneTime = STATE_ONE_TIME_DEFAULT;
 uint8_t stateTwoTime = STATE_TWO_TIME_DEFAULT;
@@ -30,9 +34,10 @@ uint8_t stateThreeTime = STATE_THREE_TIME_DEFAULT;
 uint8_t stateFourTime = STATE_FOUR_TIME_DEFAULT;
 uint8_t maxClockTime = MAX_CLOCK_TIME_DEFAULT;
 
-bool pedestrianButtonHorizontalPressed = false;
+bool pedestrianButtonHorizentalPressed = false;
 bool pedestrianButtonVerticalPressed = false;
-
+bool advancedGreenHorizentalButtonPressed = false;
+bool advancedGreenVerticalButtonPressed = false;
 
 typedef enum {
   RED,
@@ -73,8 +78,13 @@ void setup() {
   pinMode(GREEN_LED_PIN_VERTICAL, OUTPUT);
   pinMode(YELLOW_LED_PIN_VERTICAL, OUTPUT);
 
-  pinMode(BUTTON_PIN_HORIZONTAL, INPUT);
-  pinMode(BUTTON_PIN_VERTICAL, INPUT);
+  pinMode(BUTTON_PIN_PEDESTRIAN, INPUT);
+  pinMode(BUTTON_PIN_ADVANCED_GREEN, INPUT);
+
+  pinMode(PEDESTRIAN_HORIZENTAL, INPUT);
+  pinMode(PEDESTRIAN_VERTICAL, INPUT);
+  pinMode(ADVDANCED_GREEN_HORIZENTAL, INPUT);
+  pinMode(ADVDANCED_GREEN_VERTICAL, INPUT);
 
   setTimer1Freq(TIMER_ONE_DEFAULT_FREQUENCY_HZ);
 
@@ -89,8 +99,8 @@ void setup() {
   // We need two have multiple inputs per interrupt, so we we set a unique pin HIGH for each event
   // For example, hardware interrupt 1 is for both pedestrian direction. We also set pins 4 and 5 HIGH for parallel and perpendicular. In the interrupt, we check which pin is
   // HIGH to perform some action.
-  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_HORIZONTAL), pedestrianButtonHorizontal, RISING);
-  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_VERTICAL), pedestrianButtonVertical, RISING);
+  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_PEDESTRIAN), pedestrianButtonInterrupt, RISING);
+  // attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_ADVANCED_GREEN), advancedGreenButtonInterrupt, RISING);
 }
 
 void setTimer1Freq(float freqHz){
@@ -123,7 +133,7 @@ void setTimer2Freq(float freqHz)
   TCNT2  = 0;//initialize counter value to 0
   // set compare match register for 1hz increments
   uint32_t compareMatchRegister = COMPARE_MATCH_REG(freqHz);
-  OCR2A = compareMatchRegister;// = (16*10^6) / (1*1024) - 1 (must be <65536)
+  OCR2A = compareMatchRegister;// = (16*10^6) / (1000*1024) - 1 (must be <255)
   // turn on CTC mode
   TCCR2A |= (1 << WGM12);
   // Set CS12 and CS10 bits for 1024 prescaler
@@ -138,17 +148,35 @@ void loop() {
   trafficLightController();
 }
 
-/* USER CODE BEGINS HERE */
-
-void pedestrianButtonHorizontal() {
+void pedestrianButtonInterrupt() {
   /* DO SOME STUFF HERE TO CHANGE THE TIMERS */
-  pedestrianButtonHorizontalPressed = true;
+
+  if (digitalRead(PEDESTRIAN_HORIZENTAL) == HIGH)
+  {
+    pedestrianButtonHorizentalPressed = true;
+    Serial.println("Horizental pedestrian button activated");
+  }
+  else if (digitalRead(PEDESTRIAN_VERTICAL) == HIGH)
+  {
+    pedestrianButtonVerticalPressed = true;
+    Serial.println("Vertical pedestrian button activated");
+  }
+
   Serial.println("----");
 }
 
-void pedestrianButtonVertical() {
+void advancedGreenButtonInterrupt() {
   /* DO SOME STUFF HERE TO CHANGE THE TIMERS */
-  pedestrianButtonVerticalPressed = true;
+  if (digitalRead(ADVDANCED_GREEN_HORIZENTAL) == HIGH)
+  {
+    advancedGreenHorizentalButtonPressed = true;
+    Serial.println("Horizental advanced green button activated");
+  }
+  else if (digitalRead(ADVDANCED_GREEN_VERTICAL) == HIGH)
+  {
+    advancedGreenVerticalButtonPressed = true;
+    Serial.println("Vertical advanced green button activated");
+  }
   Serial.println("++++");
 }
 
@@ -157,13 +185,19 @@ void setIntersectionState(traffic_light_intersection_states_t intersectionState)
 
   switch(intersectionState) {
     case STATE1:
-      if(pedestrianButtonHorizontalPressed == true) {
+      if(advancedGreenHorizentalButtonPressed == true) {
+        digitalWrite(RED_LED_PIN_VERTICAL, HIGH);
+        advancedGreenFlashing(GREEN_LED_PIN_HORIZONTAL);
+        maxClockTime = maxClockTime + 6;
+        advancedGreenHorizentalButtonPressed = false;
+        Serial.println("Horizental advanced green activated");
+      }
+      if(pedestrianButtonHorizentalPressed == true) {
         digitalWrite(GREEN_LED_PIN_HORIZONTAL, HIGH);
         digitalWrite(RED_LED_PIN_VERTICAL, HIGH);
-        delay(6000);
-        //delaySeconds(6);
+        delayMillis(6000);
         maxClockTime = maxClockTime + 6;
-        pedestrianButtonHorizontalPressed = false;
+        pedestrianButtonHorizentalPressed = false;
         Serial.println("Horizental pedestrian button activated");
       }
       else
@@ -179,11 +213,18 @@ void setIntersectionState(traffic_light_intersection_states_t intersectionState)
     break;
 
     case STATE3:
-      if(pedestrianButtonVerticalPressed == true) {
+      if(advancedGreenVerticalButtonPressed == true) {
         digitalWrite(RED_LED_PIN_HORIZONTAL, HIGH);
+        advancedGreenFlashing(GREEN_LED_PIN_VERTICAL);
+        maxClockTime = maxClockTime + 6;
+        advancedGreenVerticalButtonPressed = false;
+        Serial.println("Horizental advanced light activated");
+      }
+      if(pedestrianButtonVerticalPressed == true) {
         digitalWrite(GREEN_LED_PIN_VERTICAL, HIGH);
-        delay(6000);
-        //delaySeconds(6);
+        digitalWrite(RED_LED_PIN_HORIZONTAL, HIGH);
+        delayMillis(6000);
+        //delayMillis(6);
         maxClockTime = maxClockTime + 6;
         pedestrianButtonVerticalPressed = false;
         Serial.println("Horizental pedestrian button activated");
@@ -220,7 +261,6 @@ void trafficLightController() {
     resetStateTimes();
     timerSeconds = 0;
   }
-
 }
 
 void resetLights() {
@@ -240,34 +280,37 @@ void resetStateTimes() {
   maxClockTime = MAX_CLOCK_TIME_DEFAULT;
 }
 
-void delaySeconds(uint32_t delayValueSeconds) {
-  if(delayValueSeconds == 0)
+void delayMillis(uint32_t delayValueMillis) {
+
+  uint32_t startTime = timerMillis;
+
+  while(timerMillis - startTime < delayValueMillis)
   {
-    return;
+    uint64_t countdown = timerMillis - startTime;
+    Serial.println(countdown);
   }
 
-  uint32_t startTime = timerSeconds;
+  return;
+}
 
-  while (delayValueSeconds > 0)
+void advancedGreenFlashing( uint8_t pin )
+{
+  uint32_t initialTime = timerSeconds;
+
+  while (initialTime + 6 > timerSeconds)
   {
-    yield();
-    while (delayValueSeconds > 0 && (timerSeconds - startTime) >= 1)
-    {
-      delayValueSeconds--;
-      startTime += 1;
-    }
+    digitalWrite(pin, HIGH);
+    delayMillis(100);
+    digitalWrite(pin, LOW);
+    delayMillis(100);
   }
 }
 
-ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz toggles pin 13 (LED)
-//generates pulse wave of frequency 1Hz/2 = 0.5kHz (takes two cycles for full wave- toggle high then toggle low)
+ISR(TIMER1_COMPA_vect){
   timerSeconds++;
+  Serial.println(maxClockTime);
 }
 
-//We need two timers to show understanding
-ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz toggles pin 13 (LED)
-//generates pulse wave of frequency 1Hz/2 = 0.5kHz (takes two cycles for full wave- toggle high then toggle low)
-if(timerSeconds == maxClockTime) {
-  timerSeconds = 0;
-}
+ISR(TIMER2_COMPA_vect){
+  timerMillis++;
 }
