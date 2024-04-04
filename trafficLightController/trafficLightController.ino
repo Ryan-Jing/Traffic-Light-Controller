@@ -97,7 +97,7 @@ void setup() {
   // For example, hardware interrupt 1 is for both pedestrian direction. We also set pins 4 and 5 HIGH for parallel and perpendicular. In the interrupt, we check which pin is
   // HIGH to perform some action.
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_PEDESTRIAN), pedestrianButtonInterrupt, RISING);
-  // attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_ADVANCED_GREEN), advancedGreenButtonInterrupt, RISING);
+  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_ADVANCED_GREEN), advancedGreenButtonInterrupt, RISING);
 }
 
 void setTimer1Freq(float freqHz){
@@ -177,13 +177,12 @@ void advancedGreenButtonInterrupt() {
   if (digitalRead(ADVDANCED_GREEN_HORIZENTAL) == HIGH && advancedGreenHorizentalButtonPressed == false)
   {
     advancedGreenHorizentalButtonPressed = true;
+    Serial.println("Advanced Green Horizental");
   }
-  else if (digitalRead(ADVDANCED_GREEN_VERTICAL) == HIGH)
+  else if (digitalRead(ADVDANCED_GREEN_VERTICAL) == HIGH && advancedGreenVerticalButtonPressed == false)
   {
     advancedGreenVerticalButtonPressed = true;
-    Serial.println("Vertical advanced green button activated");
   }
-  Serial.println("++++");
 }
 
 void setIntersectionState(traffic_light_intersection_states_t intersectionState) {
@@ -324,7 +323,7 @@ void advancedGreenFlashing( uint8_t pin, uint8_t direction )
   }
 
   uint32_t time = timerSeconds;
-   while (timerSeconds - time <= 6) { // Continue while current time is less than or equal to 6 seconds
+   while (timerSeconds - time <= addedTime) { // Continue while current time is less than or equal to 6 seconds
     // Check if the current time is even
     if (millis() % 2 == 0) {
       // If current time is even, turn on the LED
