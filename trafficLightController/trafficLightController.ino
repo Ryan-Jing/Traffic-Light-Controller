@@ -174,10 +174,9 @@ void pedestrianButtonInterrupt() {
 
 void advancedGreenButtonInterrupt() {
   /* DO SOME STUFF HERE TO CHANGE THE TIMERS */
-  if (digitalRead(ADVDANCED_GREEN_HORIZENTAL) == HIGH)
+  if (digitalRead(ADVDANCED_GREEN_HORIZENTAL) == HIGH && advancedGreenHorizentalButtonPressed == false)
   {
     advancedGreenHorizentalButtonPressed = true;
-    Serial.println("Horizental advanced green button activated");
   }
   else if (digitalRead(ADVDANCED_GREEN_VERTICAL) == HIGH)
   {
@@ -194,7 +193,7 @@ void setIntersectionState(traffic_light_intersection_states_t intersectionState)
     case STATE1:
       if(advancedGreenHorizentalButtonPressed == true) {
         digitalWrite(RED_LED_PIN_VERTICAL, HIGH);
-        advancedGreenFlashing(GREEN_LED_PIN_HORIZONTAL);
+        advancedGreenFlashing(GREEN_LED_PIN_HORIZONTAL, 0);
         advancedGreenHorizentalButtonPressed = false;
       }
       if(pedestrianButtonHorizentalPressed == true && pedestrianButtonPressed == true) {
@@ -218,7 +217,7 @@ void setIntersectionState(traffic_light_intersection_states_t intersectionState)
   case STATE3:
     if(advancedGreenVerticalButtonPressed == true) {
       digitalWrite(RED_LED_PIN_HORIZONTAL, HIGH);
-      advancedGreenFlashing(GREEN_LED_PIN_VERTICAL);
+      advancedGreenFlashing(GREEN_LED_PIN_VERTICAL, 1);
       advancedGreenVerticalButtonPressed = false;
     }
     if(pedestrianButtonVerticalPressed == true) {
@@ -304,9 +303,37 @@ void delayMillis(uint32_t delayValueMillis) {
   }
 }
 
-void advancedGreenFlashing( uint8_t pin )
+void advancedGreenFlashing( uint8_t pin, uint8_t direction )
 {
+  uint32_t addedTime = 6;
 
+  if( direction == 0 )
+  {
+
+    stateTwoTime += addedTime;
+    stateThreeTime += addedTime;
+    stateFourTime += addedTime;
+    maxClockTime += addedTime;
+  }
+
+  else
+
+  {
+    stateFourTime += addedTime;
+    maxClockTime += addedTime;
+  }
+
+  uint32_t time = timerSeconds;
+   while (timerSeconds - time <= 6) { // Continue while current time is less than or equal to 6 seconds
+    // Check if the current time is even
+    if (millis() % 2 == 0) {
+      // If current time is even, turn on the LED
+      digitalWrite(pin, HIGH);
+    } else {
+      // If current time is odd, turn off the LED
+      digitalWrite(pin, LOW);
+    }
+   }
 }
 
 ISR(TIMER1_COMPA_vect){
