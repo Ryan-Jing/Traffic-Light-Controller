@@ -23,7 +23,7 @@
 #define STATE_TWO_DURATION 2
 #define STATE_THREE_DURATION 10
 #define STATE_FOUR_DURATION 2
-#define ADVANCED_GREEN_DURATION 2
+#define ADVANCED_GREEN_DURATION_MS 2000
 
 #define STATE_ONE_TIME_DEFAULT    0
 #define STATE_TWO_TIME_DEFAULT    STATE_ONE_TIME_DEFAULT + STATE_ONE_DURATION
@@ -32,7 +32,7 @@
 #define MAX_CLOCK_TIME_DEFAULT    STATE_FOUR_TIME_DEFAULT + STATE_FOUR_DURATION
 
 uint32_t timerSeconds = 0; // Counter to keep track of the number of seconds that have elapsed
-uint64_t timerMillis = 0; // Counter to keep track of the number of milliseconds that have elapsed
+int timerMillis = 0; // Counter to keep track of the number of milliseconds that have elapsed
 
 uint8_t stateOneTime = STATE_ONE_TIME_DEFAULT;
 uint8_t stateTwoTime = STATE_TWO_DURATION;
@@ -41,16 +41,16 @@ uint8_t stateFourTime = STATE_FOUR_DURATION;
 uint8_t maxClockTime = MAX_CLOCK_TIME_DEFAULT;
 
 bool pedestrianButtonPressed = false;
-bool pedestrianButtonHorizentalPressed = false;
+bool pedestrianButtonHorizontalPressed = false;
 bool pedestrianButtonVerticalPressed = false;
-bool advancedGreenHorizentalButtonPressed = false;
+bool advancedGreenHorizontalButtonPressed = false;
 bool advancedGreenVerticalButtonPressed = false;
 
 unsigned long previousMillis = 0; // Store the last time LED was updated
 const long interval = 200;        // Blink interval in milliseconds
 bool blinkState = LOW;            // Initialize LED state for blinking
-uint64_t startHorizontalLightBlinkTime = 0;
-uint64_t startVerticalLightBlinkTime = 0;
+int startHorizontalLightBlinkTime = 0;
+int startVerticalLightBlinkTime = 0;
 
 
 typedef enum {
@@ -156,9 +156,9 @@ void loop() {
 void pedestrianButtonInterrupt() {
   pedestrianButtonPressed = true;
 
-  if (digitalRead(PEDESTRIAN_HORIZENTAL) == HIGH && pedestrianButtonHorizentalPressed == false)
+  if (digitalRead(PEDESTRIAN_HORIZONTAL) == HIGH && pedestrianButtonHorizontalPressed == false)
   {
-    pedestrianButtonHorizentalPressed = true;
+    pedestrianButtonHorizontalPressed = true;
     if (curIntersectionState == STATE3) {
       uint32_t remainingTime = STATE_FOUR_TIME_DEFAULT - timerSeconds;
 
@@ -181,9 +181,9 @@ void pedestrianButtonInterrupt() {
 
 void advancedGreenButtonInterrupt() {
   /* DO SOME STUFF HERE TO CHANGE THE TIMERS */
-  if (digitalRead(ADVDANCED_GREEN_HORIZENTAL) == HIGH)
+  if (digitalRead(ADVANCED_GREEN_HORIZONTAL) == HIGH)
   {
-    advancedGreenHorizentalButtonPressed = true;
+    advancedGreenHorizontalButtonPressed = true;
     startHorizontalLightBlinkTime = timerMillis;
 
   }
@@ -199,17 +199,17 @@ void setIntersectionState(traffic_light_intersection_states_t intersectionState)
 
   switch(intersectionState) {
     case STATE1:
-      if(advancedGreenHorizentalButtonPressed == true) {
+      if(advancedGreenHorizontalButtonPressed == true) {
         advancedGreenFlashing(GREEN_LED_PIN_HORIZONTAL, RED_LED_PIN_VERTICAL);
-        Serial.println((timerMillis - startHorizontalLightBlinkTime))
-        if (timerMillis - startHorizontalLightBlinkTime >= ADVANCED_GREEN_DURATION) {
-          advancedGreenHorizentalButtonPressed = false;
+        if (timerMillis - startHorizontalLightBlinkTime >= ADVANCED_GREEN_DURATION_MS) {
+          startHorizontalLightBlinkTime = 0;
+          advancedGreenHorizontalButtonPressed = false;
         }
       }
-      if(pedestrianButtonHorizentalPressed == true && pedestrianButtonPressed == true) {
+      if(pedestrianButtonHorizontalPressed == true && pedestrianButtonPressed == true) {
         digitalWrite(GREEN_LED_PIN_HORIZONTAL, HIGH);
         digitalWrite(RED_LED_PIN_VERTICAL, HIGH);
-        pedestrianButtonHorizentalPressed = false;
+        pedestrianButtonHorizontalPressed = false;
         pedestrianButtonPressed = false;
       }
       else
@@ -227,7 +227,8 @@ void setIntersectionState(traffic_light_intersection_states_t intersectionState)
   case STATE3:
     if(advancedGreenVerticalButtonPressed == true) {
       advancedGreenFlashing(GREEN_LED_PIN_VERTICAL, RED_LED_PIN_HORIZONTAL);        
-      if (timerMillis - startVerticalLightBlinkTime >= ADVANCED_GREEN_DURATION) {
+      if (timerMillis - startVerticalLightBlinkTime >= ADVANCED_GREEN_DURATION_MS) {
+        startVerticalLightBlinkTime = 0;
         advancedGreenVerticalButtonPressed = false;
       }
     }
