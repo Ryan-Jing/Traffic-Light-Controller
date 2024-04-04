@@ -19,21 +19,27 @@
 #define TIMER_ONE_DEFAULT_FREQUENCY_HZ 1
 #define TIMER_TWO_DEFAULT_FREQUENCY_HZ 1000
 
-#define STATE_ONE_TIME_DEFAULT    11
-#define STATE_TWO_TIME_DEFAULT    7
-#define STATE_THREE_TIME_DEFAULT  5
-#define STATE_FOUR_TIME_DEFAULT   1
-#define MAX_CLOCK_TIME_DEFAULT    12
+#define STATE_ONE_DURATION 10
+#define STATE_TWO_DURATION 2
+#define STATE_THREE_DURATION 10
+#define STATE_FOUR_DURATION 2
+
+#define STATE_ONE_TIME_DEFAULT    0
+#define STATE_TWO_TIME_DEFAULT    STATE_ONE_TIME_DEFAULT + STATE_ONE_DURATION
+#define STATE_THREE_TIME_DEFAULT  STATE_TWO_TIME_DEFAULT + STATE_TWO_DURATION
+#define STATE_FOUR_TIME_DEFAULT   STATE_THREE_TIME_DEFAULT + STATE_THREE_DURATION
+#define MAX_CLOCK_TIME_DEFAULT    STATE_FOUR_TIME_DEFAULT + STATE_FOUR_DURATION
 
 uint32_t timerSeconds = 0; // Counter to keep track of the number of seconds that have elapsed
 uint64_t timerMillis = 0; // Counter to keep track of the number of milliseconds that have elapsed
 
 uint8_t stateOneTime = STATE_ONE_TIME_DEFAULT;
-uint8_t stateTwoTime = STATE_TWO_TIME_DEFAULT;
-uint8_t stateThreeTime = STATE_THREE_TIME_DEFAULT;
-uint8_t stateFourTime = STATE_FOUR_TIME_DEFAULT;
+uint8_t stateTwoTime = STATE_TWO_DURATION;
+uint8_t stateThreeTime = STATE_THREE_DURATION;
+uint8_t stateFourTime = STATE_FOUR_DURATION;
 uint8_t maxClockTime = MAX_CLOCK_TIME_DEFAULT;
 
+bool pedestrianButtonPressed = false;
 bool pedestrianButtonHorizentalPressed = false;
 bool pedestrianButtonVerticalPressed = false;
 bool advancedGreenHorizentalButtonPressed = false;
@@ -51,11 +57,6 @@ typedef enum {
   HORIZONTAL,
 } traffic_light_inputs_t;
 
-typedef struct {
-  traffic_light_states_t curLightState;
-  traffic_light_inputs_t pedsInputs;
-} traffic_light_t;
-
 typedef enum {
   STATE1, // Horizontal GREEN and Vertical RED
   STATE2, // Horizontal YELLOW and Vertical RED
@@ -63,11 +64,7 @@ typedef enum {
   STATE4, // Horizontal RED and Vertical YELLOW
 } traffic_light_intersection_states_t;
 
-typedef struct {
-  traffic_light_t trafficLightHorizontal;
-  traffic_light_t trafficLightVertical;
-  traffic_light_intersection_states_t intersectionState;
-} traffic_light_intersection_t;
+traffic_light_intersection_states_t curIntersectionState = STATE1;
 
 void setup() {
   //set pins as outputs
@@ -150,19 +147,29 @@ void loop() {
 
 void pedestrianButtonInterrupt() {
   /* DO SOME STUFF HERE TO CHANGE THE TIMERS */
+  pedestrianButtonPressed = true;
 
-  if (digitalRead(PEDESTRIAN_HORIZENTAL) == HIGH)
+  if (digitalRead(PEDESTRIAN_HORIZENTAL) == HIGH && pedestrianButtonHorizentalPressed == false)
   {
     pedestrianButtonHorizentalPressed = true;
-    Serial.println("Horizental pedestrian button activated");
+    if (curIntersectionState == STATE3) {
+      uint32_t remainingTime = STATE_FOUR_TIME_DEFAULT - timerSeconds;
+
+      stateFourTime -= 0.3 * (remainingTime);
+      maxClockTime -= 0.3 * (remainingTime);
+    }
   }
-  else if (digitalRead(PEDESTRIAN_VERTICAL) == HIGH)
+  else if (digitalRead(PEDESTRIAN_VERTICAL) == HIGH && pedestrianButtonVerticalPressed == false)
   {
     pedestrianButtonVerticalPressed = true;
-    Serial.println("Vertical pedestrian button activated");
-  }
+    if (curIntersectionState == STATE1) {
+      uint32_t remainingTime = STATE_TWO_TIME_DEFAULT - timerSeconds;
 
-  Serial.println("----");
+      stateTwoTime -= 0.3 *(remainingTime);
+      stateThreeTime -= 0.3 *(remainingTime);
+      maxClockTime -= 0.3 *(remainingTime);
+    }
+  }
 }
 
 void advancedGreenButtonInterrupt() {
@@ -188,17 +195,13 @@ void setIntersectionState(traffic_light_intersection_states_t intersectionState)
       if(advancedGreenHorizentalButtonPressed == true) {
         digitalWrite(RED_LED_PIN_VERTICAL, HIGH);
         advancedGreenFlashing(GREEN_LED_PIN_HORIZONTAL);
-        maxClockTime = maxClockTime + 6;
         advancedGreenHorizentalButtonPressed = false;
-        Serial.println("Horizental advanced green activated");
       }
-      if(pedestrianButtonHorizentalPressed == true) {
+      if(pedestrianButtonHorizentalPressed == true && pedestrianButtonPressed == true) {
         digitalWrite(GREEN_LED_PIN_HORIZONTAL, HIGH);
         digitalWrite(RED_LED_PIN_VERTICAL, HIGH);
-        delayMillis(6000);
-        maxClockTime = maxClockTime + 6;
         pedestrianButtonHorizentalPressed = false;
-        Serial.println("Horizental pedestrian button activated");
+        pedestrianButtonPressed = false;
       }
       else
       {
@@ -207,60 +210,61 @@ void setIntersectionState(traffic_light_intersection_states_t intersectionState)
       }
     break;
 
-    case STATE2:
+  case STATE2:
       digitalWrite(YELLOW_LED_PIN_HORIZONTAL, HIGH);
       digitalWrite(RED_LED_PIN_VERTICAL, HIGH);
     break;
 
-    case STATE3:
-      if(advancedGreenVerticalButtonPressed == true) {
-        digitalWrite(RED_LED_PIN_HORIZONTAL, HIGH);
-        advancedGreenFlashing(GREEN_LED_PIN_VERTICAL);
-        maxClockTime = maxClockTime + 6;
-        advancedGreenVerticalButtonPressed = false;
-        Serial.println("Horizental advanced light activated");
-      }
-      if(pedestrianButtonVerticalPressed == true) {
-        digitalWrite(GREEN_LED_PIN_VERTICAL, HIGH);
-        digitalWrite(RED_LED_PIN_HORIZONTAL, HIGH);
-        delayMillis(6000);
-        //delayMillis(6);
-        maxClockTime = maxClockTime + 6;
-        pedestrianButtonVerticalPressed = false;
-        Serial.println("Horizental pedestrian button activated");
-      }
-      else
-      {
-        digitalWrite(RED_LED_PIN_HORIZONTAL, HIGH);
-        digitalWrite(GREEN_LED_PIN_VERTICAL, HIGH);
-      }
-    break;
-
-    case STATE4:
+  case STATE3:
+    if(advancedGreenVerticalButtonPressed == true) {
       digitalWrite(RED_LED_PIN_HORIZONTAL, HIGH);
-      digitalWrite(YELLOW_LED_PIN_VERTICAL, HIGH);
-    break;
+      advancedGreenFlashing(GREEN_LED_PIN_VERTICAL);
+      advancedGreenVerticalButtonPressed = false;
+    }
+    if(pedestrianButtonVerticalPressed == true) {
+      digitalWrite(GREEN_LED_PIN_VERTICAL, HIGH);
+      digitalWrite(RED_LED_PIN_HORIZONTAL, HIGH);
+      pedestrianButtonVerticalPressed = false;
+    }
+    else
+    {
+      digitalWrite(RED_LED_PIN_HORIZONTAL, HIGH);
+      digitalWrite(GREEN_LED_PIN_VERTICAL, HIGH);
+    }
+  break;
+
+  case STATE4:
+    digitalWrite(RED_LED_PIN_HORIZONTAL, HIGH);
+    digitalWrite(YELLOW_LED_PIN_VERTICAL, HIGH);
+  break;
   }
 }
 
 void trafficLightController() {
-  // Serial.println(timerSeconds);
-  if(maxClockTime - stateOneTime == timerSeconds) {
+
+  if(timerSeconds == stateOneTime) {
     setIntersectionState(STATE1);
+    curIntersectionState = STATE1;
   }
-  else if (maxClockTime - stateTwoTime == timerSeconds) {
+  else if (timerSeconds == stateTwoTime) {
     setIntersectionState(STATE2);
+    curIntersectionState = STATE2;
   }
-  else if (maxClockTime - stateThreeTime == timerSeconds) {
+  else if (timerSeconds == stateThreeTime) {
     setIntersectionState(STATE3);
+    curIntersectionState = STATE3;
   }
-  else if (maxClockTime - stateFourTime == timerSeconds) {
+  else if (timerSeconds == stateFourTime) {
     setIntersectionState(STATE4);
+    curIntersectionState = STATE4;
   }
-  else if (timerSeconds > maxClockTime) {
+  else if (timerSeconds >= maxClockTime) {
     resetStateTimes();
     timerSeconds = 0;
+    timerMillis = 0;
   }
+
+
 }
 
 void resetLights() {
@@ -282,33 +286,32 @@ void resetStateTimes() {
 
 void delayMillis(uint32_t delayValueMillis) {
 
-  uint32_t startTime = timerMillis;
-
-  while(timerMillis - startTime < delayValueMillis)
+  if (delayValueMillis == 0)
   {
-    uint64_t countdown = timerMillis - startTime;
-    Serial.println(countdown);
+    return;
   }
 
-  return;
+  uint32_t start = timerMillis;
+
+  while (delayValueMillis > 0)
+  {
+    yield();
+    while (delayValueMillis > 0 && (timerMillis - start) >= 1)
+    {
+      delayValueMillis--;
+      start += 1;
+    }
+  }
 }
 
 void advancedGreenFlashing( uint8_t pin )
 {
-  uint32_t initialTime = timerSeconds;
 
-  while (initialTime + 6 > timerSeconds)
-  {
-    digitalWrite(pin, HIGH);
-    delayMillis(100);
-    digitalWrite(pin, LOW);
-    delayMillis(100);
-  }
 }
 
 ISR(TIMER1_COMPA_vect){
   timerSeconds++;
-  Serial.println(maxClockTime);
+  // Serial.println(maxClockTime);
 }
 
 ISR(TIMER2_COMPA_vect){
