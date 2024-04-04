@@ -45,6 +45,10 @@ bool pedestrianButtonVerticalPressed = false;
 bool advancedGreenHorizentalButtonPressed = false;
 bool advancedGreenVerticalButtonPressed = false;
 
+unsigned long previousMillis = 0; // Store the last time LED was updated
+const long interval = 200;        // Blink interval in milliseconds
+bool blinkState = LOW;            // Initialize LED state for blinking
+
 typedef enum {
   RED,
   YELLOW,
@@ -177,14 +181,11 @@ void advancedGreenButtonInterrupt() {
   if (digitalRead(ADVDANCED_GREEN_HORIZENTAL) == HIGH)
   {
     advancedGreenHorizentalButtonPressed = true;
-    Serial.println("Horizental advanced green button activated");
   }
   else if (digitalRead(ADVDANCED_GREEN_VERTICAL) == HIGH)
   {
     advancedGreenVerticalButtonPressed = true;
-    Serial.println("Vertical advanced green button activated");
   }
-  Serial.println("++++");
 }
 
 void setIntersectionState(traffic_light_intersection_states_t intersectionState) {
@@ -193,8 +194,7 @@ void setIntersectionState(traffic_light_intersection_states_t intersectionState)
   switch(intersectionState) {
     case STATE1:
       if(advancedGreenHorizentalButtonPressed == true) {
-        digitalWrite(RED_LED_PIN_VERTICAL, HIGH);
-        advancedGreenFlashing(GREEN_LED_PIN_HORIZONTAL);
+        advancedGreenFlashing(GREEN_LED_PIN_HORIZONTAL, RED_LED_PIN_VERTICAL);
         advancedGreenHorizentalButtonPressed = false;
       }
       if(pedestrianButtonHorizentalPressed == true && pedestrianButtonPressed == true) {
@@ -217,8 +217,7 @@ void setIntersectionState(traffic_light_intersection_states_t intersectionState)
 
   case STATE3:
     if(advancedGreenVerticalButtonPressed == true) {
-      digitalWrite(RED_LED_PIN_HORIZONTAL, HIGH);
-      advancedGreenFlashing(GREEN_LED_PIN_VERTICAL);
+      advancedGreenFlashing(GREEN_LED_PIN_VERTICAL, RED_LED_PIN_HORIZONTAL);
       advancedGreenVerticalButtonPressed = false;
     }
     if(pedestrianButtonVerticalPressed == true) {
@@ -304,9 +303,27 @@ void delayMillis(uint32_t delayValueMillis) {
   }
 }
 
-void advancedGreenFlashing( uint8_t pin )
+void advancedGreenFlashing( uint8_t pin, uint8_t stablePin)
 {
+    if (digitalRead(pin) == HIGH) {
+      unsigned long currentMillis = timerMillis(); // Get the current time
 
+      // Check if it's time to blink the LED
+      if (currentMillis - previousMillis >= interval) {
+        previousMillis = currentMillis; // Save the last time we blinked the LED
+
+        // Toggle the blink LED state
+        blinkState = !blinkState;
+        digitalWrite(pin, blinkState);
+        
+        // Keep the hold LED on
+        digitalWrite(stablePin, HIGH);
+      }
+  } else {
+    // If button is not pressed, turn off both LEDs
+    digitalWrite(pin, LOW);
+    digitalWrite(holdLED, LOW);
+  }
 }
 
 ISR(TIMER1_COMPA_vect){
