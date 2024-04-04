@@ -8,9 +8,9 @@
 
 #define BUTTON_PIN_PEDESTRIAN       2
 #define BUTTON_PIN_ADVANCED_GREEN   3
-#define PEDESTRIAN_HORIZENTAL       4
+#define PEDESTRIAN_HORIZONTAL       4
 #define PEDESTRIAN_VERTICAL         5
-#define ADVDANCED_GREEN_HORIZENTAL  6
+#define ADVANCED_GREEN_HORIZONTAL   6
 #define ADVDANCED_GREEN_VERTICAL    7
 
 /* Timer macros */
@@ -23,6 +23,7 @@
 #define STATE_TWO_DURATION 2
 #define STATE_THREE_DURATION 10
 #define STATE_FOUR_DURATION 2
+#define ADVANCED_GREEN_DURATION 2
 
 #define STATE_ONE_TIME_DEFAULT    0
 #define STATE_TWO_TIME_DEFAULT    STATE_ONE_TIME_DEFAULT + STATE_ONE_DURATION
@@ -48,6 +49,9 @@ bool advancedGreenVerticalButtonPressed = false;
 unsigned long previousMillis = 0; // Store the last time LED was updated
 const long interval = 200;        // Blink interval in milliseconds
 bool blinkState = LOW;            // Initialize LED state for blinking
+uint64_t startHorizontalLightBlinkTime = 0;
+uint64_t startVerticalLightBlinkTime = 0;
+
 
 typedef enum {
   RED,
@@ -82,9 +86,9 @@ void setup() {
   pinMode(BUTTON_PIN_PEDESTRIAN, INPUT);
   pinMode(BUTTON_PIN_ADVANCED_GREEN, INPUT);
 
-  pinMode(PEDESTRIAN_HORIZENTAL, INPUT);
+  pinMode(PEDESTRIAN_HORIZONTAL, INPUT);
   pinMode(PEDESTRIAN_VERTICAL, INPUT);
-  pinMode(ADVDANCED_GREEN_HORIZENTAL, INPUT);
+  pinMode(ADVANCED_GREEN_HORIZONTAL, INPUT);
   pinMode(ADVDANCED_GREEN_VERTICAL, INPUT);
 
   setTimer1Freq(TIMER_ONE_DEFAULT_FREQUENCY_HZ);
@@ -101,7 +105,7 @@ void setup() {
   // For example, hardware interrupt 1 is for both pedestrian direction. We also set pins 4 and 5 HIGH for parallel and perpendicular. In the interrupt, we check which pin is
   // HIGH to perform some action.
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_PEDESTRIAN), pedestrianButtonInterrupt, RISING);
-  // attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_ADVANCED_GREEN), advancedGreenButtonInterrupt, RISING);
+  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_ADVANCED_GREEN), advancedGreenButtonInterrupt, RISING);
 }
 
 void setTimer1Freq(float freqHz){
@@ -150,7 +154,6 @@ void loop() {
 }
 
 void pedestrianButtonInterrupt() {
-  /* DO SOME STUFF HERE TO CHANGE THE TIMERS */
   pedestrianButtonPressed = true;
 
   if (digitalRead(PEDESTRIAN_HORIZENTAL) == HIGH && pedestrianButtonHorizentalPressed == false)
@@ -181,10 +184,13 @@ void advancedGreenButtonInterrupt() {
   if (digitalRead(ADVDANCED_GREEN_HORIZENTAL) == HIGH)
   {
     advancedGreenHorizentalButtonPressed = true;
+    startHorizontalLightBlinkTime = timerMillis;
+
   }
   else if (digitalRead(ADVDANCED_GREEN_VERTICAL) == HIGH)
   {
     advancedGreenVerticalButtonPressed = true;
+    startVerticalLightBlinkTime = timerMillis;
   }
 }
 
@@ -195,7 +201,10 @@ void setIntersectionState(traffic_light_intersection_states_t intersectionState)
     case STATE1:
       if(advancedGreenHorizentalButtonPressed == true) {
         advancedGreenFlashing(GREEN_LED_PIN_HORIZONTAL, RED_LED_PIN_VERTICAL);
-        advancedGreenHorizentalButtonPressed = false;
+        Serial.println((timerMillis - startHorizontalLightBlinkTime))
+        if (timerMillis - startHorizontalLightBlinkTime >= ADVANCED_GREEN_DURATION) {
+          advancedGreenHorizentalButtonPressed = false;
+        }
       }
       if(pedestrianButtonHorizentalPressed == true && pedestrianButtonPressed == true) {
         digitalWrite(GREEN_LED_PIN_HORIZONTAL, HIGH);
@@ -217,8 +226,10 @@ void setIntersectionState(traffic_light_intersection_states_t intersectionState)
 
   case STATE3:
     if(advancedGreenVerticalButtonPressed == true) {
-      advancedGreenFlashing(GREEN_LED_PIN_VERTICAL, RED_LED_PIN_HORIZONTAL);
-      advancedGreenVerticalButtonPressed = false;
+      advancedGreenFlashing(GREEN_LED_PIN_VERTICAL, RED_LED_PIN_HORIZONTAL);        
+      if (timerMillis - startVerticalLightBlinkTime >= ADVANCED_GREEN_DURATION) {
+        advancedGreenVerticalButtonPressed = false;
+      }
     }
     if(pedestrianButtonVerticalPressed == true) {
       digitalWrite(GREEN_LED_PIN_VERTICAL, HIGH);
@@ -241,19 +252,19 @@ void setIntersectionState(traffic_light_intersection_states_t intersectionState)
 
 void trafficLightController() {
 
-  if(timerSeconds == stateOneTime) {
+  if(timerSeconds >= stateOneTime && timerSeconds < stateTwoTime) {
     setIntersectionState(STATE1);
     curIntersectionState = STATE1;
   }
-  else if (timerSeconds == stateTwoTime) {
+  else if (timerSeconds >= stateTwoTime && timerSeconds < stateThreeTime) {
     setIntersectionState(STATE2);
     curIntersectionState = STATE2;
   }
-  else if (timerSeconds == stateThreeTime) {
+  else if (timerSeconds >= stateThreeTime && timerSeconds < stateFourTime) {
     setIntersectionState(STATE3);
     curIntersectionState = STATE3;
   }
-  else if (timerSeconds == stateFourTime) {
+  else if (timerSeconds >= stateFourTime && timerSeconds < maxClockTime) {
     setIntersectionState(STATE4);
     curIntersectionState = STATE4;
   }
@@ -262,8 +273,6 @@ void trafficLightController() {
     timerSeconds = 0;
     timerMillis = 0;
   }
-
-
 }
 
 void resetLights() {
@@ -283,52 +292,25 @@ void resetStateTimes() {
   maxClockTime = MAX_CLOCK_TIME_DEFAULT;
 }
 
-void delayMillis(uint32_t delayValueMillis) {
-
-  if (delayValueMillis == 0)
-  {
-    return;
-  }
-
-  uint32_t start = timerMillis;
-
-  while (delayValueMillis > 0)
-  {
-    yield();
-    while (delayValueMillis > 0 && (timerMillis - start) >= 1)
-    {
-      delayValueMillis--;
-      start += 1;
-    }
-  }
-}
-
 void advancedGreenFlashing( uint8_t pin, uint8_t stablePin)
 {
-    if (digitalRead(pin) == HIGH) {
-      unsigned long currentMillis = timerMillis(); // Get the current time
+  unsigned long currentMillis = timerMillis; // Get the current time
 
-      // Check if it's time to blink the LED
-      if (currentMillis - previousMillis >= interval) {
-        previousMillis = currentMillis; // Save the last time we blinked the LED
+  // Check if it's time to blink the LED
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis; // Save the last time we blinked the LED
 
-        // Toggle the blink LED state
-        blinkState = !blinkState;
-        digitalWrite(pin, blinkState);
-        
-        // Keep the hold LED on
-        digitalWrite(stablePin, HIGH);
-      }
-  } else {
-    // If button is not pressed, turn off both LEDs
-    digitalWrite(pin, LOW);
-    digitalWrite(holdLED, LOW);
-  }
-}
+    // Toggle the blink LED state
+    blinkState = !blinkState;
+    digitalWrite(pin, blinkState);
+    
+    // Keep the hold LED on
+    digitalWrite(stablePin, HIGH);
+  } 
+} 
 
 ISR(TIMER1_COMPA_vect){
   timerSeconds++;
-  // Serial.println(maxClockTime);
 }
 
 ISR(TIMER2_COMPA_vect){
