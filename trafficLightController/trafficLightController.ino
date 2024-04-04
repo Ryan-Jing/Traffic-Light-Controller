@@ -40,6 +40,7 @@ uint8_t stateFourTime = STATE_FOUR_DURATION;
 uint8_t maxClockTime = MAX_CLOCK_TIME_DEFAULT;
 
 bool blinkLedVertical = false;
+bool blinkLedHorizental = false;
 
 bool pedestrianButtonPressed = false;
 
@@ -147,7 +148,7 @@ void setTimer2Freq(float freqHz)
 void loop() {
   trafficLightController();
 
-  if(blinkLedVertical)
+  if(blinkLedHorizental)
   {
     if (timerSeconds % 2 == 0) {
       // If current time is even, turn on the LED
@@ -159,7 +160,24 @@ void loop() {
     }
   }
 
-  if(timerSeconds == 5 && blinkLedVertical == true)
+  if(blinkLedVertical)
+  {
+    if (timerSeconds % 2 == 0) {
+      // If current time is even, turn on the LED
+      digitalWrite(GREEN_LED_PIN_VERTICAL, HIGH);
+    }
+    else {
+      // If current time is odd, turn off the LED
+      digitalWrite(GREEN_LED_PIN_VERTICAL, LOW);
+    }
+  }
+
+  if(timerSeconds == stateOneTime + 6 && blinkLedHorizental == true)
+  {
+    blinkLedHorizental = false;
+  }
+
+  if(timerSeconds == stateThreeTime + 6 && blinkLedVertical == true)
   {
     blinkLedVertical = false;
   }
@@ -326,10 +344,10 @@ void advancedGreenFlashing( uint8_t pin, uint8_t direction )
 {
   uint32_t addedTime = 6;
 
-  blinkLedVertical = true;
 
   if( direction == 0 )
   {
+    blinkLedHorizental = true;
     stateTwoTime += addedTime;
     stateThreeTime += addedTime;
     stateFourTime += addedTime;
@@ -338,6 +356,7 @@ void advancedGreenFlashing( uint8_t pin, uint8_t direction )
 
   else
   {
+    blinkLedVertical = true;
     stateFourTime += addedTime;
     maxClockTime += addedTime;
   }
