@@ -186,31 +186,35 @@ void loop() {
 void pedestrianButtonInterrupt() {
   /* DO SOME STUFF HERE TO CHANGE THE TIMERS */
   pedestrianButtonPressed = true;
+  Serial.println("Pedestrian Button Pressed");
 
   if (digitalRead(PEDESTRIAN_HORIZENTAL) == HIGH && pedestrianButtonHorizentalPressed == false)
   {
-    pedestrianButtonHorizentalPressed = true;
     if (curIntersectionState == STATE3) {
       uint32_t remainingTime = STATE_FOUR_TIME_DEFAULT - timerSeconds;
 
       stateFourTime -= 0.3 * (remainingTime);
       maxClockTime -= 0.3 * (remainingTime);
+      pedestrianButtonHorizentalPressed = true;
+      Serial.println("Pedestrian Horizental");
     }
   }
   else if (digitalRead(PEDESTRIAN_VERTICAL) == HIGH && pedestrianButtonVerticalPressed == false)
   {
-    pedestrianButtonVerticalPressed = true;
     if (curIntersectionState == STATE1) {
       uint32_t remainingTime = STATE_TWO_TIME_DEFAULT - timerSeconds;
 
-      stateTwoTime -= 0.3 *(remainingTime);
+      // stateTwoTime -= 0.3 *(remainingTime);
       stateThreeTime -= 0.3 *(remainingTime);
       maxClockTime -= 0.3 *(remainingTime);
+      pedestrianButtonVerticalPressed = true;
+      Serial.println("Pedestrian Vertical");
     }
   }
 }
 
 void advancedGreenButtonInterrupt() {
+  Serial.println("Advanced Green Button Pressed");
   /* DO SOME STUFF HERE TO CHANGE THE TIMERS */
   if (digitalRead(ADVDANCED_GREEN_HORIZENTAL) == HIGH && advancedGreenHorizentalButtonPressed == false)
   {
@@ -220,6 +224,7 @@ void advancedGreenButtonInterrupt() {
   else if (digitalRead(ADVDANCED_GREEN_VERTICAL) == HIGH && advancedGreenVerticalButtonPressed == false)
   {
     advancedGreenVerticalButtonPressed = true;
+    Serial.println("Advanced Green Vertical");
   }
 }
 
@@ -299,8 +304,6 @@ void trafficLightController() {
     timerSeconds = 0;
     timerMillis = 0;
   }
-
-
 }
 
 void resetLights() {
