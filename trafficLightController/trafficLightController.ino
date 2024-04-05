@@ -19,10 +19,10 @@
 #define TIMER_ONE_DEFAULT_FREQUENCY_HZ 1
 #define TIMER_TWO_DEFAULT_FREQUENCY_HZ 1000
 
-#define STATE_ONE_DURATION 10
-#define STATE_TWO_DURATION 2
-#define STATE_THREE_DURATION 10
-#define STATE_FOUR_DURATION 2
+#define STATE_ONE_DURATION    10
+#define STATE_TWO_DURATION    2
+#define STATE_THREE_DURATION  10
+#define STATE_FOUR_DURATION   2
 
 #define STATE_ONE_TIME_DEFAULT    0
 #define STATE_TWO_TIME_DEFAULT    STATE_ONE_TIME_DEFAULT + STATE_ONE_DURATION
@@ -32,6 +32,9 @@
 
 uint32_t timerSeconds = 0; // Counter to keep track of the number of seconds that have elapsed
 uint64_t timerMillis = 0; // Counter to keep track of the number of milliseconds that have elapsed
+
+uint64_t previousMillis = 0;
+const uint8_t interval = 200;
 
 uint8_t stateOneTime = STATE_ONE_TIME_DEFAULT;
 uint8_t stateTwoTime = STATE_TWO_DURATION;
@@ -146,31 +149,62 @@ void setTimer2Freq(float freqHz)
 }
 
 void loop() {
+
   trafficLightController();
 
   if(blinkLedHorizental)
   {
-    if (timerSeconds % 2 == 0) {
-      // If current time is even, turn on the LED
-      digitalWrite(GREEN_LED_PIN_HORIZONTAL, HIGH);
-    }
-    else {
-      // If current time is odd, turn off the LED
-      digitalWrite(GREEN_LED_PIN_HORIZONTAL, LOW);
+    uint64_t currentMillis = timerMillis;  // Get the current time
+
+    if (currentMillis - previousMillis >= interval)
+    {
+      // Save the last time LED was updated
+      previousMillis = currentMillis;
+
+      // Toggle the LED state
+      if (digitalRead(GREEN_LED_PIN_HORIZONTAL) == LOW)
+      {
+        digitalWrite(GREEN_LED_PIN_HORIZONTAL, HIGH);  // Turn on the LED
+      }
+      else
+      {
+        digitalWrite(GREEN_LED_PIN_HORIZONTAL, LOW);   // Turn off the LED
+      }
     }
   }
 
   if(blinkLedVertical)
   {
-    if (timerSeconds % 2 == 0) {
-      // If current time is even, turn on the LED
-      digitalWrite(GREEN_LED_PIN_VERTICAL, HIGH);
-    }
-    else {
-      // If current time is odd, turn off the LED
-      digitalWrite(GREEN_LED_PIN_VERTICAL, LOW);
+    uint64_t currentMillis = timerMillis;  // Get the current time
+
+    if (currentMillis - previousMillis >= interval)
+    {
+      // Save the last time LED was updated
+      previousMillis = currentMillis;
+
+      // Toggle the LED state
+      if (digitalRead(GREEN_LED_PIN_VERTICAL) == LOW)
+      {
+        digitalWrite(GREEN_LED_PIN_VERTICAL, HIGH);  // Turn on the LED
+      }
+      else
+      {
+        digitalWrite(GREEN_LED_PIN_VERTICAL, LOW);   // Turn off the LED
+      }
     }
   }
+
+  // if(blinkLedVertical)
+  // {
+  //   if (timerSeconds % 2 == 0) {
+  //     // If current time is even, turn on the LED
+  //     digitalWrite(GREEN_LED_PIN_VERTICAL, HIGH);
+  //   }
+  //   else {
+  //     // If current time is odd, turn off the LED
+  //     digitalWrite(GREEN_LED_PIN_VERTICAL, LOW);
+  //   }
+  // }
 
   if(timerSeconds == stateOneTime + 6 && blinkLedHorizental == true)
   {
@@ -323,30 +357,9 @@ void resetStateTimes() {
   maxClockTime = MAX_CLOCK_TIME_DEFAULT;
 }
 
-void delayMillis(uint32_t delayValueMillis) {
-
-  if (delayValueMillis == 0)
-  {
-    return;
-  }
-
-  uint32_t start = timerMillis;
-
-  while (delayValueMillis > 0)
-  {
-    yield();
-    while (delayValueMillis > 0 && (timerMillis - start) >= 1)
-    {
-      delayValueMillis--;
-      start += 1;
-    }
-  }
-}
-
 void advancedGreenFlashing( uint8_t pin, uint8_t direction )
 {
   uint32_t addedTime = 6;
-
 
   if( direction == 0 )
   {
