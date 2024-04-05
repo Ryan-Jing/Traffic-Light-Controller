@@ -30,27 +30,27 @@
 #define STATE_FOUR_TIME_DEFAULT   STATE_THREE_TIME_DEFAULT + STATE_THREE_DURATION
 #define MAX_CLOCK_TIME_DEFAULT    STATE_FOUR_TIME_DEFAULT + STATE_FOUR_DURATION
 
-uint32_t timerSeconds = 0; // Counter to keep track of the number of seconds that have elapsed
-uint64_t timerMillis = 0; // Counter to keep track of the number of milliseconds that have elapsed
+volatile uint32_t timerSeconds = 0; // Counter to keep track of the number of seconds that have elapsed
+volatile uint64_t timerMillis = 0; // Counter to keep track of the number of milliseconds that have elapsed
 
 uint64_t previousMillis = 0;
 const uint8_t interval = 200;
 
-uint8_t stateOneTime = STATE_ONE_TIME_DEFAULT;
-uint8_t stateTwoTime = STATE_TWO_DURATION;
-uint8_t stateThreeTime = STATE_THREE_DURATION;
-uint8_t stateFourTime = STATE_FOUR_DURATION;
-uint8_t maxClockTime = MAX_CLOCK_TIME_DEFAULT;
+volatile uint8_t stateOneTime = STATE_ONE_TIME_DEFAULT;
+volatile uint8_t stateTwoTime = STATE_TWO_DURATION;
+volatile uint8_t stateThreeTime = STATE_THREE_DURATION;
+volatile uint8_t stateFourTime = STATE_FOUR_DURATION;
+volatile uint8_t maxClockTime = MAX_CLOCK_TIME_DEFAULT;
 
-bool blinkLedVertical = false;
-bool blinkLedHorizental = false;
+volatile bool blinkLedVertical = false;
+volatile bool blinkLedHorizental = false;
 
-bool pedestrianButtonPressed = false;
+volatile bool pedestrianButtonPressed = false;
 
-bool pedestrianButtonHorizentalPressed = false;
-bool pedestrianButtonVerticalPressed = false;
-bool advancedGreenHorizentalButtonPressed = false;
-bool advancedGreenVerticalButtonPressed = false;
+volatile bool pedestrianButtonHorizentalPressed = false;
+volatile bool pedestrianButtonVerticalPressed = false;
+volatile bool advancedGreenHorizentalButtonPressed = false;
+volatile bool advancedGreenVerticalButtonPressed = false;
 
 typedef enum {
   RED,
@@ -71,7 +71,7 @@ typedef enum {
   STATE4, // Horizontal RED and Vertical YELLOW
 } traffic_light_intersection_states_t;
 
-traffic_light_intersection_states_t curIntersectionState = STATE1;
+volatile traffic_light_intersection_states_t curIntersectionState = STATE1;
 
 void setup() {
   //set pins as outputs
