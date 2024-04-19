@@ -14,7 +14,7 @@
 #define ADVDANCED_GREEN_VERTICAL    7
 
 /* Timer macros */
-#define COMPARE_MATCH_REG(f) (16000000) / (f*1024) - 1
+#define COMPARE_MATCH_REG(f) (16000000) / (f*1024) - 1 //15640
 
 #define TIMER_ONE_DEFAULT_FREQUENCY_HZ 1
 #define TIMER_TWO_DEFAULT_FREQUENCY_HZ 1000
@@ -30,11 +30,11 @@
 #define STATE_FOUR_TIME_DEFAULT   STATE_THREE_TIME_DEFAULT + STATE_THREE_DURATION
 #define MAX_CLOCK_TIME_DEFAULT    STATE_FOUR_TIME_DEFAULT + STATE_FOUR_DURATION
 
-volatile uint32_t timerSeconds = 0; // Counter to keep track of the number of seconds that have elapsed
-volatile uint64_t timerMillis = 0; // Counter to keep track of the number of milliseconds that have elapsed
+#define LED_BLINK_INTERVAL 100
+uint32_t timerSeconds = 0; // Counter to keep track of the number of seconds that have elapsed
+uint64_t timerMillis = 0; // Counter to keep track of the number of milliseconds that have elapsed
 
 uint64_t previousMillis = 0;
-const uint8_t interval = 200;
 
 volatile uint8_t stateOneTime = STATE_ONE_TIME_DEFAULT;
 volatile uint8_t stateTwoTime = STATE_TWO_DURATION;
@@ -97,66 +97,89 @@ void setup() {
   Serial.begin(9600);
 
   // Set the initial state
-
   setIntersectionState(STATE1);
 
-  // We need two have multiple inputs per interrupt, so we we set a unique pin HIGH for each event
-  // For example, hardware interrupt 1 is for both pedestrian direction. We also set pins 4 and 5 HIGH for parallel and perpendicular. In the interrupt, we check which pin is
-  // HIGH to perform some action.
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_PEDESTRIAN), pedestrianButtonInterrupt, RISING);
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_ADVANCED_GREEN), advancedGreenButtonInterrupt, RISING);
 }
 
 void setTimer1Freq(float freqHz){
-  cli();//stop interrupts
+  //stop interrupts
+  cli();
 
   //set timer1 interrupt at 1Hz
-  TCCR1A = 0;// set entire TCCR1A register to 0
-  TCCR1B = 0;// same for TCCR1B
-  TCNT1  = 0;//initialize counter value to 0
+  TCCR1A = 0;
+
+  // same for TCCR1B
+  TCCR1B = 0;
+
+  //initialize counter value to 0
+  TCNT1  = 0;
+
   // set compare match register for 1hz increments
   uint32_t compareMatchRegister = COMPARE_MATCH_REG(freqHz);
-  OCR1A = compareMatchRegister;// = (16*10^6) / (1*1024) - 1 (must be <65536)
+
+  // = (16*10^6) / (1*1024) - 1 (must be <65536), value is 15624
+  OCR1A = compareMatchRegister;
+
   // turn on CTC mode
   TCCR1B |= (1 << WGM12);
+
   // Set CS12 and CS10 bits for 1024 prescaler
   TCCR1B |= (1 << CS12) | (1 << CS10);
+
   // enable timer compare interrupt
   TIMSK1 |= (1 << OCIE1A);
 
+  //allow interrupts
   sei();
 }
 
 void setTimer2Freq(float freqHz)
 {
-  cli();//stop interrupts
+  //stop interrupts
+  cli();
 
-  //set timer1 interrupt at 1Hz
-  TCCR2A = 0;// set entire TCCR1A register to 0
-  TCCR2B = 0;// same for TCCR1B
-  TCNT2  = 0;//initialize counter value to 0
+  //set timer1 interrupt at 1000Hz
+
+  // set entire TCCR1A register to 0
+  TCCR2A = 0;
+
+  // same for TCCR1B
+  TCCR2B = 0;
+
+  //initialize counter value to 0
+  TCNT2  = 0;
   // set compare match register for 1hz increments
   uint32_t compareMatchRegister = COMPARE_MATCH_REG(freqHz);
-  OCR2A = compareMatchRegister;// = (16*10^6) / (1000*1024) - 1 (must be <255)
+
+  // = (16*10^6) / (1000*1024) - 1 (must be <255) 14.625
+  OCR2A = compareMatchRegister;
+
   // turn on CTC mode
   TCCR2A |= (1 << WGM12);
+
   // Set CS12 and CS10 bits for 1024 prescaler
   TCCR2B |= (1 << CS12) | (1 << CS10);
+
   // enable timer compare interrupt
   TIMSK2 |= (1 << OCIE1A);
 
+  //allow interrupts
   sei();
 }
 
 void loop() {
 
+  // Loop through main traffic light controller
   trafficLightController();
 
+  //Check if pedestrian button is pressed
   if(blinkLedHorizental)
   {
     uint64_t currentMillis = timerMillis;  // Get the current time
 
-    if (currentMillis - previousMillis >= interval)
+    if (currentMillis - previousMillis >= LED_BLINK_INTERVAL)
     {
       // Save the last time LED was updated
       previousMillis = currentMillis;
@@ -177,7 +200,7 @@ void loop() {
   {
     uint64_t currentMillis = timerMillis;  // Get the current time
 
-    if (currentMillis - previousMillis >= interval)
+    if (currentMillis - previousMillis >= LED_BLINK_INTERVAL)
     {
       // Save the last time LED was updated
       previousMillis = currentMillis;
@@ -194,26 +217,16 @@ void loop() {
     }
   }
 
-  // if(blinkLedVertical)
-  // {
-  //   if (timerSeconds % 2 == 0) {
-  //     // If current time is even, turn on the LED
-  //     digitalWrite(GREEN_LED_PIN_VERTICAL, HIGH);
-  //   }
-  //   else {
-  //     // If current time is odd, turn off the LED
-  //     digitalWrite(GREEN_LED_PIN_VERTICAL, LOW);
-  //   }
-  // }
-
   if(timerSeconds == stateOneTime + 6 && blinkLedHorizental == true)
   {
     blinkLedHorizental = false;
+    digitalWrite(GREEN_LED_PIN_HORIZONTAL, HIGH);
   }
 
   if(timerSeconds == stateThreeTime + 6 && blinkLedVertical == true)
   {
     blinkLedVertical = false;
+    digitalWrite(GREEN_LED_PIN_VERTICAL, HIGH);
   }
 }
 
@@ -381,8 +394,10 @@ void advancedGreenFlashing( uint8_t pin, uint8_t direction )
 ISR(TIMER1_COMPA_vect){
   timerSeconds++;
   // Serial.println(maxClockTime);
+  // Serial.println(timerSeconds);
 }
 
 ISR(TIMER2_COMPA_vect){
   timerMillis++;
+  // Serial.println(timerMillis);
 }
